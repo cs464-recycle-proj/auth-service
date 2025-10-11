@@ -1,4 +1,3 @@
-````markdown
 # auth-service
 
 ## Description
