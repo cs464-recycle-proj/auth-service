@@ -29,4 +29,5 @@ mvn test -Dspring.profiles.active=test
 | `/api/auth/signup`       | POST   | Register a new user            |
 | `/api/auth/login`        | POST   | Login with email and password  |
 | `/api/auth/admin/signup` | POST   | Register a new admin (secured) |
+| `/api/auth/logout`       | POST   | Logout users                   |
 | `/api/health`            | GET    | Health check (service status)  |
