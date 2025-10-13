@@ -27,10 +27,10 @@ public class SecurityConfiguration {
                                 .csrf(AbstractHttpConfigurer::disable)
 
                                 .authorizeHttpRequests(auth -> auth
-                                                .requestMatchers("/api/health").permitAll()
+                                                .requestMatchers("/api/auth/health").permitAll()
                                                 .requestMatchers("/api/auth/admin/signup").hasRole("ADMIN")
-                                                .requestMatchers("/api/auth/signup", "/api/auth/login")
-                                                .permitAll()
+                                                .requestMatchers("/api/auth/signup", "/api/auth/login").permitAll()
+                                                .requestMatchers("/api/verify/**").permitAll()
                                                 .anyRequest()
                                                 .authenticated())
 

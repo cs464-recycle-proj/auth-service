@@ -47,6 +47,10 @@ public class User implements UserDetails {
         updatedAt = Instant.now();
     }
 
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean isVerified = false;
+
     // --- UserDetails Implementations ---
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -80,6 +84,6 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return isVerified;
     }
 }
