@@ -25,14 +25,20 @@ public class SecurityConfiguration {
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
                 http
                                 .csrf(AbstractHttpConfigurer::disable)
-
                                 .authorizeHttpRequests(auth -> auth
-                                                .requestMatchers("/api/auth/health").permitAll()
+                                                // Public endpoints
+                                                .requestMatchers(
+                                                                "/api/auth/health",
+                                                                "/api/auth/signup",
+                                                                "/api/auth/login",
+                                                                "/api/verify/**")
+                                                .permitAll()
+
+                                                // Admin-only endpoints
                                                 .requestMatchers("/api/auth/admin/signup").hasRole("ADMIN")
-                                                .requestMatchers("/api/auth/signup", "/api/auth/login").permitAll()
-                                                .requestMatchers("/api/verify/**").permitAll()
-                                                .anyRequest()
-                                                .authenticated())
+
+                                                // All other requests require authentication
+                                                .anyRequest().authenticated())
 
                                 .sessionManagement(sess -> sess
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))

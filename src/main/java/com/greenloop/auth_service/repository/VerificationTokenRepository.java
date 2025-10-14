@@ -12,6 +12,8 @@ import java.util.List;
 public interface VerificationTokenRepository extends JpaRepository<VerificationToken, UUID> {
 
     Optional<VerificationToken> findByToken(String token);
+
     Optional<VerificationToken> findByUserId(UUID userId);
+
     List<VerificationToken> findByExpiryDateBeforeAndIsUsedIsFalse(Instant now);
 }

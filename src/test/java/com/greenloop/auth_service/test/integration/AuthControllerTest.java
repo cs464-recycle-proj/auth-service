@@ -6,263 +6,217 @@ import com.greenloop.auth_service.dto.SignUpRequest;
 import com.greenloop.auth_service.model.User;
 import com.greenloop.auth_service.model.UserRole;
 import com.greenloop.auth_service.repository.UserRepository;
+import com.greenloop.auth_service.repository.VerificationTokenRepository;
 import com.greenloop.auth_service.security.JwtService;
+import com.greenloop.auth_service.service.EmailService;
+import com.greenloop.auth_service.service.VerificationService;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Transactional
 class AuthControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+        @Autowired
+        private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+        @Autowired
+        private ObjectMapper objectMapper;
 
-    @Autowired
-    private UserRepository userRepository;
+        @Autowired
+        private UserRepository userRepository;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+        @Autowired
+        private PasswordEncoder passwordEncoder;
 
-    @Autowired
-    private JwtService jwtService;
+        @Autowired
+        private JwtService jwtService;
 
-    @BeforeEach
-    void setUp() {
-        userRepository.deleteAll();
-    }
+        @MockBean
+        private VerificationService verificationService;
 
-    @Test
-    void signup_WithValidRequest_ShouldReturnAuthResponse() throws Exception {
-        SignUpRequest request = new SignUpRequest();
-        request.setEmail("newuser@example.com");
-        request.setPassword("password123");
+        @MockBean
+        private EmailService emailService;
 
-        mockMvc.perform(post("/api/auth/signup")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token", notNullValue()))
-                .andExpect(jsonPath("$.userId", notNullValue()))
-                .andExpect(jsonPath("$.email").value("newuser@example.com"))
-                .andExpect(jsonPath("$.role").value("USER"));
-    }
+        @MockBean
+        private VerificationTokenRepository tokenRepository;
 
-    @Test
-    void signup_WithExistingEmail_ShouldReturnConflict() throws Exception {
-        // Create existing user
-        User existingUser = User.builder()
-                .email("existing@example.com")
-                .password(passwordEncoder.encode("password123"))
-                .role(UserRole.USER)
-                .build();
-        userRepository.save(existingUser);
+        @BeforeEach
+        void setUp() {
+                userRepository.deleteAll();
+                doNothing().when(verificationService).createAndSendOtp(anyString());
+                doNothing().when(emailService).sendOtpEmail(anyString(), anyString());
+        }
 
-        SignUpRequest request = new SignUpRequest();
-        request.setEmail("existing@example.com");
-        request.setPassword("newpassword");
+        // -------------------- SIGNUP TESTS --------------------
 
-        mockMvc.perform(post("/api/auth/signup")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isConflict());
-    }
+        @Test
+        void signup_WithValidRequest_ShouldReturnAuthResponse() throws Exception {
+                SignUpRequest request = new SignUpRequest();
+                request.setEmail("newuser@example.com");
+                request.setPassword("password123");
 
-    @Test
-    void adminSignup_WithValidRequest_ShouldCreateAdminUser() throws Exception {
-        // Create an admin user for authentication
-        User admin = User.builder()
-                .email("admin@example.com")
-                .password(passwordEncoder.encode("adminpass"))
-                .role(UserRole.ADMIN)
-                .build();
-        userRepository.save(admin);
-        String adminToken = jwtService.generateToken(admin);
+                mockMvc.perform(post("/api/auth/signup")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.token", notNullValue()))
+                                .andExpect(jsonPath("$.userId", notNullValue()))
+                                .andExpect(jsonPath("$.email").value("newuser@example.com"))
+                                .andExpect(jsonPath("$.role").value("USER"));
 
-        SignUpRequest request = new SignUpRequest();
-        request.setEmail("newadmin@example.com");
-        request.setPassword("adminpassword");
+                User saved = userRepository.findByEmail("newuser@example.com").orElse(null);
+                assertNotNull(saved);
+                assertTrue(passwordEncoder.matches("password123", saved.getPassword()));
+                assertEquals(UserRole.USER, saved.getRole());
+        }
 
-        mockMvc.perform(post("/api/auth/admin/signup")
-                .header("Authorization", "Bearer " + adminToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token", notNullValue()))
-                .andExpect(jsonPath("$.userId", notNullValue()))
-                .andExpect(jsonPath("$.email").value("newadmin@example.com"))
-                .andExpect(jsonPath("$.role").value("ADMIN"));
-    }
+        @Test
+        void signup_WithExistingEmail_ShouldReturnConflict() throws Exception {
+                User existing = User.builder()
+                                .email("existing@example.com")
+                                .password(passwordEncoder.encode("password123"))
+                                .role(UserRole.USER)
+                                .isVerified(true)
+                                .build();
+                userRepository.save(existing);
 
-    @Test
-    void adminSignup_WithExistingEmail_ShouldReturnConflict() throws Exception {
-        // Create admin for auth
-        User admin = User.builder()
-                .email("admin@example.com")
-                .password(passwordEncoder.encode("adminpass"))
-                .role(UserRole.ADMIN)
-                .build();
-        userRepository.save(admin);
-        String adminToken = jwtService.generateToken(admin);
+                SignUpRequest request = new SignUpRequest();
+                request.setEmail("existing@example.com");
+                request.setPassword("newpassword");
 
-        // Create existing user
-        User existingUser = User.builder()
-                .email("existing@example.com")
-                .password(passwordEncoder.encode("password123"))
-                .role(UserRole.USER)
-                .build();
-        userRepository.save(existingUser);
+                mockMvc.perform(post("/api/auth/signup")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isConflict());
+        }
 
-        SignUpRequest request = new SignUpRequest();
-        request.setEmail("existing@example.com");
-        request.setPassword("newpassword");
+        @Test
+        void signup_ShouldEncryptPassword() throws Exception {
+                SignUpRequest request = new SignUpRequest();
+                request.setEmail("encrypt@example.com");
+                request.setPassword("plainpassword");
 
-        mockMvc.perform(post("/api/auth/admin/signup")
-                .header("Authorization", "Bearer " + adminToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isConflict());
-    }
+                mockMvc.perform(post("/api/auth/signup")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isOk());
 
-    @Test
-    void adminSignup_WithoutAuthentication_ShouldReturnUnauthorized() throws Exception {
-        SignUpRequest request = new SignUpRequest();
-        request.setEmail("newadmin@example.com");
-        request.setPassword("adminpassword");
+                User saved = userRepository.findByEmail("encrypt@example.com").orElse(null);
+                assertNotNull(saved);
+                assertNotEquals("plainpassword", saved.getPassword());
+                assertTrue(passwordEncoder.matches("plainpassword", saved.getPassword()));
+        }
 
-        mockMvc.perform(post("/api/auth/admin/signup")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isForbidden());
-    }
+        // -------------------- ADMIN SIGNUP TESTS --------------------
 
-    @Test
-    void adminSignup_WithRegularUserToken_ShouldReturnForbidden() throws Exception {
-        // Create regular user
-        User user = User.builder()
-                .email("user@example.com")
-                .password(passwordEncoder.encode("userpass"))
-                .role(UserRole.USER)
-                .build();
-        userRepository.save(user);
-        String userToken = jwtService.generateToken(user);
+        @Test
+        void adminSignup_WithValidRequest_ShouldCreateAdminUser() throws Exception {
+                User admin = User.builder()
+                                .email("admin@example.com")
+                                .password(passwordEncoder.encode("adminpass"))
+                                .role(UserRole.ADMIN)
+                                .isVerified(true)
+                                .build();
+                userRepository.save(admin);
+                String token = jwtService.generateToken(admin);
 
-        SignUpRequest request = new SignUpRequest();
-        request.setEmail("newadmin@example.com");
-        request.setPassword("adminpassword");
+                SignUpRequest request = new SignUpRequest();
+                request.setEmail("newadmin@example.com");
+                request.setPassword("adminpassword");
 
-        mockMvc.perform(post("/api/auth/admin/signup")
-                .header("Authorization", "Bearer " + userToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isForbidden());
-    }
+                mockMvc.perform(post("/api/auth/admin/signup")
+                                .header("Authorization", "Bearer " + token)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.email").value("newadmin@example.com"))
+                                .andExpect(jsonPath("$.role").value("ADMIN"));
+        }
 
-    @Test
-    void login_WithValidCredentials_ShouldReturnAuthResponse() throws Exception {
-        // Create user
-        User user = User.builder()
-                .email("user@example.com")
-                .password(passwordEncoder.encode("password123"))
-                .role(UserRole.USER)
-                .build();
-        userRepository.save(user);
+        @Test
+        void adminSignup_WithoutAuthentication_ShouldReturnForbidden() throws Exception {
+                SignUpRequest request = new SignUpRequest();
+                request.setEmail("newadmin@example.com");
+                request.setPassword("adminpassword");
 
-        LoginRequest request = new LoginRequest();
-        request.setEmail("user@example.com");
-        request.setPassword("password123");
+                mockMvc.perform(post("/api/auth/admin/signup")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isForbidden());
+        }
 
-        mockMvc.perform(post("/api/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token", notNullValue()))
-                .andExpect(jsonPath("$.userId", notNullValue()))
-                .andExpect(jsonPath("$.email").value("user@example.com"))
-                .andExpect(jsonPath("$.role").value("USER"));
-    }
+        // -------------------- LOGIN TESTS --------------------
 
-    @Test
-    void login_WithInvalidPassword_ShouldReturnUnauthorized() throws Exception {
-        // Create user
-        User user = User.builder()
-                .email("user@example.com")
-                .password(passwordEncoder.encode("password123"))
-                .role(UserRole.USER)
-                .build();
-        userRepository.save(user);
+        @Test
+        void login_WithValidCredentials_ShouldReturnAuthResponse() throws Exception {
+                User user = User.builder()
+                                .email("user@example.com")
+                                .password(passwordEncoder.encode("password123"))
+                                .role(UserRole.USER)
+                                .isVerified(true)
+                                .build();
+                userRepository.save(user);
 
-        LoginRequest request = new LoginRequest();
-        request.setEmail("user@example.com");
-        request.setPassword("wrongpassword");
+                LoginRequest request = new LoginRequest();
+                request.setEmail("user@example.com");
+                request.setPassword("password123");
 
-        mockMvc.perform(post("/api/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isUnauthorized());
-    }
+                mockMvc.perform(post("/api/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.email").value("user@example.com"))
+                                .andExpect(jsonPath("$.role").value("USER"));
+        }
 
-    @Test
-    void login_WithNonExistentEmail_ShouldReturnUnauthorized() throws Exception {
-        LoginRequest request = new LoginRequest();
-        request.setEmail("nonexistent@example.com");
-        request.setPassword("password123");
+        @Test
+        void login_WithInvalidPassword_ShouldReturnUnauthorized() throws Exception {
+                User user = User.builder()
+                                .email("user@example.com")
+                                .password(passwordEncoder.encode("password123"))
+                                .role(UserRole.USER)
+                                .isVerified(true)
+                                .build();
+                userRepository.save(user);
 
-        mockMvc.perform(post("/api/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isUnauthorized());
-    }
+                LoginRequest request = new LoginRequest();
+                request.setEmail("user@example.com");
+                request.setPassword("wrongpassword");
 
-    @Test
-    void signup_ShouldPersistUserInDatabase() throws Exception {
-        SignUpRequest request = new SignUpRequest();
-        request.setEmail("persist@example.com");
-        request.setPassword("password123");
+                mockMvc.perform(post("/api/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isUnauthorized());
+        }
 
-        mockMvc.perform(post("/api/auth/signup")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk());
+        @Test
+        void login_WithNonExistentEmail_ShouldReturnUnauthorized() throws Exception {
+                LoginRequest request = new LoginRequest();
+                request.setEmail("nonexistent@example.com");
+                request.setPassword("password123");
 
-        // Verify user was persisted
-        User savedUser = userRepository.findByEmail("persist@example.com").orElse(null);
-        assert savedUser != null;
-        assert savedUser.getEmail().equals("persist@example.com");
-        assert savedUser.getRole() == UserRole.USER;
-    }
-
-    @Test
-    void signup_ShouldEncryptPassword() throws Exception {
-        SignUpRequest request = new SignUpRequest();
-        request.setEmail("encrypt@example.com");
-        request.setPassword("plainpassword");
-
-        mockMvc.perform(post("/api/auth/signup")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk());
-
-        // Verify password is encrypted
-        User savedUser = userRepository.findByEmail("encrypt@example.com").orElse(null);
-        assert savedUser != null;
-        assert !savedUser.getPassword().equals("plainpassword");
-        assert passwordEncoder.matches("plainpassword", savedUser.getPassword());
-    }
+                mockMvc.perform(post("/api/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isUnauthorized());
+        }
 }

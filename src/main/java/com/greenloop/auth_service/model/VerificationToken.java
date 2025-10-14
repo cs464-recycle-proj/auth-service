@@ -18,7 +18,7 @@ public class VerificationToken {
     private UUID id;
 
     @Column(nullable = false, unique = true)
-    private String token; 
+    private String token;
 
     @OneToOne(targetEntity = User.class, fetch = FetchType.EAGER)
     @JoinColumn(nullable = false, name = "user_id", unique = true)
@@ -28,7 +28,7 @@ public class VerificationToken {
     private Instant expiryDate;
 
     @Builder.Default
-    private boolean isUsed = false; 
+    private boolean isUsed = false;
 
     public boolean isExpired() {
         return expiryDate.isBefore(Instant.now());

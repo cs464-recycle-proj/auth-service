@@ -6,6 +6,7 @@ import com.greenloop.auth_service.dto.PasswordChangeRequest;
 import com.greenloop.auth_service.dto.SignUpRequest;
 import com.greenloop.auth_service.exception.EmailAlreadyExistsException;
 import com.greenloop.auth_service.exception.InvalidCredentialsException;
+import com.greenloop.auth_service.exception.ResourceNotFoundException;
 import com.greenloop.auth_service.exception.VerificationNotCompleteException;
 import com.greenloop.auth_service.model.User;
 import com.greenloop.auth_service.model.UserRole;
@@ -118,14 +119,13 @@ public class AuthService {
                 .build();
     }
 
-    // To test
     @Transactional
     public void resetPassword(String userId, PasswordChangeRequest request) {
         User user = userRepository.findById(UUID.fromString(userId))
-                .orElseThrow(() -> new IllegalArgumentException("User not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
-            throw new IllegalArgumentException("Old password is incorrect.");
+            throw new InvalidCredentialsException("Old password is incorrect.");
         }
 
         String encodedPassword = passwordEncoder.encode(request.getNewPassword());
