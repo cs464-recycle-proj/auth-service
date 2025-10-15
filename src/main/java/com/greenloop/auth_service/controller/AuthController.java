@@ -49,6 +49,7 @@ public class AuthController {
             @RequestBody PasswordChangeRequest request) {
 
         authService.resetPassword(userId, request);
+
         return ResponseEntity.ok().build();
     }
 
