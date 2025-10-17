@@ -121,5 +121,3 @@ This service uses **GitHub Actions** for CI. The workflow includes:
 * Workflow triggers on push or PR to `main` or `develop` branches affecting `auth-service/**`
 * Artifacts such as SpotBugs and Checkstyle reports are uploaded for inspection even if the build does not fail
 * This ensures developers can review code quality before merging
-
-```
