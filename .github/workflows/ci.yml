@@ -1,0 +1,73 @@
+name: CI - Auth Service
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'auth-service/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'auth-service/**'
+
+jobs:
+  build-analyze-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: auth-service
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: maven
+
+      - name: Verify Maven Wrapper
+        run: chmod +x mvnw
+
+      - name: Build (skip tests)
+        run: ./mvnw clean package -DskipTests
+
+      # SpotBugs
+      - name: Run SpotBugs analysis
+        run: ./mvnw spotbugs:spotbugs
+
+      - name: Check SpotBugs violations
+        run: ./mvnw spotbugs:check
+        continue-on-error: true
+
+      - name: Upload SpotBugs report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spotbugs-report-auth
+          path: auth-service/target/spotbugsXml.xml
+
+      # Checkstyle
+      - name: Run Checkstyle
+        run: ./mvnw checkstyle:checkstyle
+        continue-on-error: true
+
+      - name: Upload Checkstyle report (only if violations exist)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkstyle-report-auth
+          path: auth-service/target/site/checkstyle.html
+
+      # Tests
+      - name: Run tests
+        run: ./mvnw test -Dspring.profiles.active=test
+
+      - name: Archive test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-auth
+          path: auth-service/target/surefire-reports

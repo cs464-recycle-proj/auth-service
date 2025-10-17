@@ -13,10 +13,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
-import java.util.Random;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +30,8 @@ public class VerificationService {
     @Value("${otp.expiration-minutes}")
     private int otpExpirationMinutes;
 
+    private static final SecureRandom secureRandom = new SecureRandom();
+
     @Transactional
     public void createAndSendOtp(String email) {
         User user = userRepository.findByEmail(email)
@@ -39,7 +41,7 @@ public class VerificationService {
             throw new UserAlreadyVerifiedException(email);
         }
 
-        String otpCode = String.format("%06d", new Random().nextInt(999999));
+        String otpCode = String.format("%06d", secureRandom.nextInt(1_000_000));
         Instant expirationTime = Instant.now().plus(otpExpirationMinutes, ChronoUnit.MINUTES);
         Optional<VerificationToken> existingToken = tokenRepository.findByUserId(user.getId());
         existingToken.ifPresent(tokenRepository::delete);
