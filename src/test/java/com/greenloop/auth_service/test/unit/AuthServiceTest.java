@@ -1,194 +1,225 @@
-// package com.greenloop.auth_service.test.unit;
+package com.greenloop.auth_service.test.unit;
 
-// import com.greenloop.auth_service.dto.AuthResponse;
-// import com.greenloop.auth_service.dto.LoginRequest;
-// import com.greenloop.auth_service.dto.PasswordChangeRequest;
-// import com.greenloop.auth_service.dto.SignUpRequest;
-// import com.greenloop.auth_service.exception.EmailAlreadyExistsException;
-// import com.greenloop.auth_service.exception.InvalidCredentialsException;
-// import com.greenloop.auth_service.exception.ResourceNotFoundException;
-// import com.greenloop.auth_service.model.User;
-// import com.greenloop.auth_service.model.UserRole;
-// import com.greenloop.auth_service.repository.UserRepository;
-// import com.greenloop.auth_service.service.AuthService;
-// import com.greenloop.auth_service.service.VerificationService;
-// import com.greenloop.auth_service.security.JwtService;
-// import org.junit.jupiter.api.BeforeEach;
-// import org.junit.jupiter.api.Test;
-// import org.junit.jupiter.api.extension.ExtendWith;
-// import org.mockito.InjectMocks;
-// import org.mockito.Mock;
-// import org.mockito.junit.jupiter.MockitoExtension;
-// import org.springframework.security.authentication.AuthenticationManager;
-// import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-// import org.springframework.security.core.AuthenticationException;
-// import org.springframework.security.crypto.password.PasswordEncoder;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
 
-// import java.util.Optional;
-// import java.util.UUID;
+import com.greenloop.auth_service.dto.AuthResponse;
+import com.greenloop.auth_service.dto.LoginRequest;
+import com.greenloop.auth_service.dto.PasswordChangeRequest;
+import com.greenloop.auth_service.dto.SignUpRequest;
+import com.greenloop.auth_service.exception.EmailAlreadyExistsException;
+import com.greenloop.auth_service.exception.InvalidCredentialsException;
+import com.greenloop.auth_service.exception.ResourceNotFoundException;
+import com.greenloop.auth_service.model.User;
+import com.greenloop.auth_service.model.UserRole;
+import com.greenloop.auth_service.repository.UserRepository;
+import com.greenloop.auth_service.service.AuthService;
+import com.greenloop.auth_service.service.VerificationService;
+import com.greenloop.auth_service.security.JwtService;
+import com.greenloop.auth_service.util.CookieUtil;
 
-// import static org.junit.jupiter.api.Assertions.*;
-// import static org.mockito.ArgumentMatchers.any;
-// import static org.mockito.Mockito.*;
+import jakarta.servlet.http.HttpServletResponse;
 
-// /**
-//  * Unit tests for the AuthService, mocking all external dependencies
-//  * to test only the business logic.
-//  */
-// @ExtendWith(MockitoExtension.class)
-// public class AuthServiceTest {
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
-//     @Mock
-//     private UserRepository userRepository;
-//     @Mock
-//     private PasswordEncoder passwordEncoder;
-//     @Mock
-//     private JwtService jwtService;
-//     @Mock
-//     private AuthenticationManager authenticationManager;
-//     @Mock
-//     private VerificationService verificationService;
+import java.util.Optional;
+import java.util.UUID;
 
-//     @InjectMocks
-//     private AuthService authService;
+@ExtendWith(MockitoExtension.class)
+public class AuthServiceTest {
 
-//     private SignUpRequest signUpRequest;
-//     private LoginRequest loginRequest;
-//     private PasswordChangeRequest passwordChangeRequest;
-//     private User user;
-//     private final String DUMMY_USER_ID = UUID.randomUUID().toString();
-//     private final String EXISTING_ENCODED_PASSWORD = "existingEncodedPassword";
-//     private final String NEW_ENCODED_PASSWORD = "newEncodedPassword";
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private PasswordEncoder passwordEncoder;
+    @Mock
+    private JwtService jwtService;
+    @Mock
+    private AuthenticationManager authenticationManager;
+    @Mock
+    private VerificationService verificationService;
+    @Mock
+    private CookieUtil cookieUtil;
+    @Mock
+    private HttpServletResponse response;
 
-//     @BeforeEach
-//     void setUp() {
-//         signUpRequest = new SignUpRequest("test@example.com", "password123");
-//         loginRequest = new LoginRequest("test@example.com", "password123");
-//         passwordChangeRequest = new PasswordChangeRequest("oldPassword123", "newPassword456");
-//         user = User.builder()
-//                 .id(UUID.randomUUID())
-//                 .email("test@example.com")
-//                 .password(EXISTING_ENCODED_PASSWORD)
-//                 .role(UserRole.USER)
-//                 .build();
-//     }
+    private AuthService authService;
 
-//     // --- Signup Tests ---
+    @BeforeEach
+    void setUp() {
+        authService = new AuthService(userRepository, passwordEncoder, jwtService,
+                authenticationManager, verificationService, cookieUtil);
+    }
 
-//     @Test
-//     void signup_SuccessfulRegistration() {
-//         when(userRepository.findByEmail(signUpRequest.getEmail())).thenReturn(Optional.empty());
-//         when(passwordEncoder.encode(any(String.class))).thenReturn("encodedPassword");
-//         when(userRepository.save(any(User.class))).thenReturn(user);
-//         when(jwtService.generateToken(any(User.class))).thenReturn("fake-jwt-token");
+    @Test
+    void signup_WithNewEmail_ShouldCreateUser() {
+        // Arrange
+        SignUpRequest request = new SignUpRequest();
+        request.setEmail("test@example.com");
+        request.setPassword("password123");
 
-//         AuthResponse response = authService.signup(signUpRequest);
+        when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(any())).thenReturn("encodedPassword");
+        when(userRepository.save(any())).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            user.setId(UUID.randomUUID());
+            return user;
+        });
+        when(jwtService.generateToken(any(User.class))).thenReturn("jwt-token");
 
-//         assertNotNull(response);
-//         assertEquals("fake-jwt-token", response.getToken());
-//         assertEquals(UserRole.USER, response.getRole());
+        // Act
+        AuthResponse response = authService.signup(request, this.response);
 
-//         verify(userRepository, times(1)).save(any(User.class));
-//         verify(verificationService, times(1)).createAndSendOtp(user.getEmail());
-//     }
+        // Assert
+        assertNotNull(response);
+        assertEquals(request.getEmail(), response.getEmail());
+        assertEquals(UserRole.USER, response.getRole());
+        verify(verificationService).createAndSendOtp(request.getEmail());
+        verify(cookieUtil).addTokenCookie(any(), any());
+    }
 
-//     @Test
-//     void signup_EmailAlreadyExists_ThrowsException() {
-//         when(userRepository.findByEmail(signUpRequest.getEmail())).thenReturn(Optional.of(user));
+    @Test
+    void signup_WithExistingEmail_ShouldThrowException() {
+        // Arrange
+        SignUpRequest request = new SignUpRequest();
+        request.setEmail("existing@example.com");
+        request.setPassword("password123");
 
-//         assertThrows(EmailAlreadyExistsException.class, () -> authService.signup(signUpRequest));
+        when(userRepository.findByEmail(request.getEmail()))
+                .thenReturn(Optional.of(new User()));
 
-//         verify(userRepository, never()).save(any(User.class));
-//         verify(verificationService, never()).createAndSendOtp(any(String.class));
-//     }
+        // Act & Assert
+        assertThrows(EmailAlreadyExistsException.class,
+                () -> authService.signup(request, response));
+    }
 
-//     // --- Admin Signup Tests ---
+    @Test
+    void login_WithValidCredentials_ShouldSucceed() {
+        // Arrange
+        LoginRequest request = new LoginRequest();
+        request.setEmail("test@example.com");
+        request.setPassword("password123");
 
-//     @Test
-//     void adminSignup_SuccessfulRegistration() {
-//         when(userRepository.findByEmail(signUpRequest.getEmail())).thenReturn(Optional.empty());
-//         when(passwordEncoder.encode(any(String.class))).thenReturn("encodedPassword");
-//         User adminUser = User.builder()
-//                 .role(UserRole.ADMIN)
-//                 .build();
-//         when(userRepository.save(any(User.class))).thenReturn(adminUser);
-//         when(jwtService.generateToken(any(User.class))).thenReturn("fake-admin-jwt-token");
+        User user = User.builder()
+                .id(UUID.randomUUID())
+                .email(request.getEmail())
+                .role(UserRole.USER)
+                .build();
 
-//         AuthResponse response = authService.adminSignup(signUpRequest);
+        when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(user));
+        when(jwtService.generateToken(user)).thenReturn("jwt-token");
 
-//         assertNotNull(response);
-//         assertEquals("fake-admin-jwt-token", response.getToken());
-//         assertEquals(UserRole.ADMIN, response.getRole());
-//     }
+        // Act
+        AuthResponse response = authService.login(request, this.response);
 
-//     // --- Login Tests ---
+        // Assert
+        assertNotNull(response);
+        assertEquals(user.getEmail(), response.getEmail());
+        assertEquals(user.getRole(), response.getRole());
+        verify(authenticationManager).authenticate(
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+        verify(cookieUtil).addTokenCookie(any(), any());
+    }
 
-//     @Test
-//     void login_SuccessfulAuthentication() {
-//         when(userRepository.findByEmail(loginRequest.getEmail())).thenReturn(Optional.of(user));
-//         when(jwtService.generateToken(any(User.class))).thenReturn("fake-jwt-token");
+    @Test
+    void login_WithInvalidCredentials_ShouldThrowException() {
+        // Arrange
+        LoginRequest request = new LoginRequest();
+        request.setEmail("test@example.com");
+        request.setPassword("wrongpassword");
 
-//         AuthResponse response = authService.login(loginRequest);
+        when(authenticationManager.authenticate(any()))
+                .thenThrow(new InvalidCredentialsException("Invalid credentials"));
 
-//         assertNotNull(response);
-//         assertEquals("fake-jwt-token", response.getToken());
-//         verify(authenticationManager, times(1)).authenticate(any(UsernamePasswordAuthenticationToken.class));
-//     }
+        // Act & Assert
+        assertThrows(InvalidCredentialsException.class,
+                () -> authService.login(request, response));
+    }
 
-//     @Test
-//     void login_InvalidCredentials_ThrowsException() {
-//         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-//                 .thenThrow(mock(AuthenticationException.class));
+    @Test
+    void resetPassword_WithValidCredentials_ShouldSucceed() {
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        String oldPassword = "oldPassword";
+        String newPassword = "newPassword";
 
-//         assertThrows(InvalidCredentialsException.class, () -> authService.login(loginRequest));
+        PasswordChangeRequest request = new PasswordChangeRequest();
+        request.setOldPassword(oldPassword);
+        request.setNewPassword(newPassword);
 
-//         verify(userRepository, never()).findByEmail(any(String.class));
-//     }
+        User user = User.builder()
+                .id(userId)
+                .email("test@example.com")
+                .password("encodedOldPassword")
+                .build();
 
-//     // --- Reset Password Tests (New Tests) ---
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(oldPassword, user.getPassword())).thenReturn(true);
+        when(passwordEncoder.encode(newPassword)).thenReturn("encodedNewPassword");
 
-//     @Test
-//     void resetPassword_SuccessfulChange() {
-//         when(userRepository.findById(UUID.fromString(DUMMY_USER_ID))).thenReturn(Optional.of(user));
-//         when(passwordEncoder.matches(
-//                 passwordChangeRequest.getOldPassword(),
-//                 EXISTING_ENCODED_PASSWORD)).thenReturn(true);
+        // Act
+        authService.resetPassword(userId.toString(), request);
 
-//         when(passwordEncoder.encode(passwordChangeRequest.getNewPassword()))
-//                 .thenReturn(NEW_ENCODED_PASSWORD);
-//         when(userRepository.save(any(User.class))).thenReturn(user);
+        // Assert
+        verify(userRepository).save(user);
+        assertEquals("encodedNewPassword", user.getPassword());
+    }
 
-//         authService.resetPassword(DUMMY_USER_ID, passwordChangeRequest);
+    @Test
+    void resetPassword_WithInvalidOldPassword_ShouldThrowException() {
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        String oldPassword = "wrongPassword";
+        String newPassword = "newPassword";
 
-//         verify(userRepository, times(1)).save(user);
+        PasswordChangeRequest request = new PasswordChangeRequest();
+        request.setOldPassword(oldPassword);
+        request.setNewPassword(newPassword);
 
-//         assertEquals(NEW_ENCODED_PASSWORD, user.getPassword());
-//     }
+        User user = User.builder()
+                .id(userId)
+                .email("test@example.com")
+                .password("encodedOldPassword")
+                .build();
 
-//     @Test
-//     void resetPassword_UserNotFound_ThrowsException() {
-//         when(userRepository.findById(UUID.fromString(DUMMY_USER_ID))).thenReturn(Optional.empty());
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(oldPassword, user.getPassword())).thenReturn(false);
 
-//         assertThrows(ResourceNotFoundException.class,
-//                 () -> authService.resetPassword(DUMMY_USER_ID, passwordChangeRequest));
+        // Act & Assert
+        assertThrows(InvalidCredentialsException.class,
+                () -> authService.resetPassword(userId.toString(), request));
+    }
 
-//         verify(userRepository, never()).save(any(User.class));
-//         verify(passwordEncoder, never()).matches(any(), any());
-//         verify(passwordEncoder, never()).encode(any());
-//     }
+    @Test
+    void resetPassword_WithNonExistentUser_ShouldThrowException() {
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        PasswordChangeRequest request = new PasswordChangeRequest();
+        request.setOldPassword("oldPassword");
+        request.setNewPassword("newPassword");
 
-//     @Test
-//     void resetPassword_IncorrectOldPassword_ThrowsException() {
-//         when(userRepository.findById(UUID.fromString(DUMMY_USER_ID))).thenReturn(Optional.of(user));
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
-//         when(passwordEncoder.matches(
-//                 passwordChangeRequest.getOldPassword(),
-//                 EXISTING_ENCODED_PASSWORD)).thenReturn(false);
+        // Act & Assert
+        assertThrows(ResourceNotFoundException.class,
+                () -> authService.resetPassword(userId.toString(), request));
+    }
 
-//         assertThrows(InvalidCredentialsException.class,
-//                 () -> authService.resetPassword(DUMMY_USER_ID, passwordChangeRequest));
+    @Test
+    void logout_ShouldClearAuthCookie() {
+        // Act
+        authService.logout(response);
 
-//         verify(userRepository, never()).save(any(User.class));
-//         verify(passwordEncoder, never()).encode(any());
-//     }
-// }
+        // Assert
+        verify(cookieUtil).deleteTokenCookie(response);
+    }
+}

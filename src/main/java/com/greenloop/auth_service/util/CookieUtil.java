@@ -72,11 +72,11 @@ public class CookieUtil {
      * Delete token cookie (for logout)
      */
     public void deleteTokenCookie(HttpServletResponse response) {
-        Cookie cookie = new Cookie(cookieName, null);
+        Cookie cookie = new Cookie(cookieName, "");
         cookie.setHttpOnly(true);
         cookie.setSecure(secure);
         cookie.setPath(path);
-        cookie.setMaxAge(0); // Delete immediately
+        cookie.setMaxAge(0); 
 
         if (!domain.isEmpty()) {
             cookie.setDomain(domain);

@@ -25,7 +25,7 @@ Key features include:
 mvn spring-boot:run
 ```
 
-### Run Tests (WIP)
+### Run Tests (Completed both unit & integration tests)
 
 ```bash
 mvn test -Dspring.profiles.active=test
