@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: auth-service
+        working-directory: ./
 
     steps:
       - name: Checkout repository
@@ -47,7 +47,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: spotbugs-report-auth
-          path: auth-service/target/spotbugsXml.xml
+          path: target/spotbugsXml.xml
 
       # Checkstyle
       - name: Run Checkstyle
@@ -59,7 +59,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: checkstyle-report-auth
-          path: auth-service/target/site/checkstyle.html
+          path: target/site/checkstyle.html
 
       # Tests
       - name: Run tests
@@ -70,4 +70,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results-auth
-          path: auth-service/target/surefire-reports
+          path: target/surefire-reports
