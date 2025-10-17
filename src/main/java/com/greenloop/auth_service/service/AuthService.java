@@ -12,7 +12,9 @@ import com.greenloop.auth_service.model.User;
 import com.greenloop.auth_service.model.UserRole;
 import com.greenloop.auth_service.repository.UserRepository;
 import com.greenloop.auth_service.security.JwtService;
+import com.greenloop.auth_service.util.CookieUtil;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
 import java.util.UUID;
@@ -34,12 +36,13 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final VerificationService verificationService;
+    private final CookieUtil cookieUtil;
 
     /**
-     * Registers a new user.
+     * Registers a new user and sets JWT in cookie.
      */
     @Transactional
-    public AuthResponse signup(SignUpRequest request) {
+    public AuthResponse signup(SignUpRequest request, HttpServletResponse response) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new EmailAlreadyExistsException("A user with this email address already exists.");
         }
@@ -54,11 +57,14 @@ public class AuthService {
         verificationService.createAndSendOtp(savedUser.getEmail());
         String jwtToken = jwtService.generateToken(savedUser);
 
+        // Set token in HTTP-only cookie
+        cookieUtil.addTokenCookie(response, jwtToken);
+
         return AuthResponse.builder()
-                .token(jwtToken)
                 .userId(savedUser.getId())
                 .email(savedUser.getEmail())
                 .role(savedUser.getRole())
+                .message("Signup successful. Verification OTP sent to email.")
                 .build();
     }
 
@@ -67,7 +73,7 @@ public class AuthService {
      * users.
      */
     @Transactional
-    public AuthResponse adminSignup(SignUpRequest request) {
+    public AuthResponse adminSignup(SignUpRequest request, HttpServletResponse response) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new EmailAlreadyExistsException("A user with this email address already exists.");
         }
@@ -82,18 +88,21 @@ public class AuthService {
         User savedUser = userRepository.save(user);
         String jwtToken = jwtService.generateToken(savedUser);
 
+        // Set token in HTTP-only cookie
+        cookieUtil.addTokenCookie(response, jwtToken);
+
         return AuthResponse.builder()
-                .token(jwtToken)
                 .userId(savedUser.getId())
                 .email(savedUser.getEmail())
                 .role(savedUser.getRole())
+                .message("Admin account created successfully.")
                 .build();
     }
 
     /**
-     * Authenticates a user and returns a JWT.
+     * Authenticates a user and sets JWT in cookie.
      */
-    public AuthResponse login(LoginRequest request) {
+    public AuthResponse login(LoginRequest request, HttpServletResponse response) {
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
@@ -111,12 +120,22 @@ public class AuthService {
 
         String jwtToken = jwtService.generateToken(user);
 
+        // Set token in HTTP-only cookie
+        cookieUtil.addTokenCookie(response, jwtToken);
+
         return AuthResponse.builder()
-                .token(jwtToken)
                 .userId(user.getId())
                 .email(user.getEmail())
                 .role(user.getRole())
+                .message("Login successful.")
                 .build();
+    }
+
+    /**
+     * Logs out user by clearing the auth cookie.
+     */
+    public void logout(HttpServletResponse response) {
+        cookieUtil.deleteTokenCookie(response);
     }
 
     @Transactional

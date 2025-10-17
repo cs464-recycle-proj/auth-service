@@ -10,8 +10,8 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class AuthResponse {
-    private String token;
     private UUID userId;
     private String email;
     private UserRole role;
+    private String message;
 }

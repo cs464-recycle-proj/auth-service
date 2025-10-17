@@ -30,7 +30,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({ InvalidCredentialsException.class, AuthenticationException.class })
     public ResponseEntity<ApiResponse> handleAuthenticationExceptions(Exception ex) {
-        return buildResponse(HttpStatus.UNAUTHORIZED, "Invalid email or password.");
+        return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)

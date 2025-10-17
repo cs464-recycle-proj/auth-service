@@ -1,5 +1,6 @@
 package com.greenloop.auth_service.security;
 
+import com.greenloop.auth_service.util.CookieUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,11 +21,12 @@ public class SecurityConfiguration {
 
         private final JwtAuthFilter jwtAuthFilter;
         private final AuthenticationProvider authenticationProvider;
+        private final CookieUtil cookieUtil;
 
         @Bean
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
                 http
-                                .csrf(AbstractHttpConfigurer::disable)
+                                .csrf(AbstractHttpConfigurer::disable) // Consider enabling CSRF with cookie-based auth
                                 .authorizeHttpRequests(auth -> auth
                                                 // Public endpoints
                                                 .requestMatchers(
@@ -49,7 +51,12 @@ public class SecurityConfiguration {
                                                 .logoutUrl("/api/auth/logout")
                                                 .logoutSuccessHandler((request, response, authentication) -> {
                                                         SecurityContextHolder.clearContext();
+                                                        // Delete the auth cookie
+                                                        cookieUtil.deleteTokenCookie(response);
                                                         response.setStatus(HttpStatus.OK.value());
+                                                        response.setContentType("application/json");
+                                                        response.getWriter()
+                                                                        .write("{\"message\":\"Logout successful\"}");
                                                 })
                                                 .invalidateHttpSession(false));
 

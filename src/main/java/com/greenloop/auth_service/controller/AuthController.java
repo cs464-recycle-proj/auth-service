@@ -6,6 +6,7 @@ import com.greenloop.auth_service.dto.PasswordChangeRequest;
 import com.greenloop.auth_service.dto.SignUpRequest;
 import com.greenloop.auth_service.service.AuthService;
 
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -29,28 +30,40 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/signup")
-    public ResponseEntity<AuthResponse> signup(@RequestBody SignUpRequest request) {
-        return ResponseEntity.ok(authService.signup(request));
+    public ResponseEntity<AuthResponse> signup(
+            @Valid @RequestBody SignUpRequest request,
+            HttpServletResponse response) {
+        return ResponseEntity.ok(authService.signup(request, response));
     }
 
     @PostMapping("/admin/signup")
-    public ResponseEntity<AuthResponse> adminSignup(@Valid @RequestBody SignUpRequest request) {
-        return ResponseEntity.ok(authService.adminSignup(request));
+    public ResponseEntity<AuthResponse> adminSignup(
+            @Valid @RequestBody SignUpRequest request,
+            HttpServletResponse response) {
+        return ResponseEntity.ok(authService.adminSignup(request, response));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
-        return ResponseEntity.ok(authService.login(request));
+    public ResponseEntity<AuthResponse> login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletResponse response) {
+        return ResponseEntity.ok(authService.login(request, response));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Map<String, String>> logout(HttpServletResponse response) {
+        authService.logout(response);
+        return ResponseEntity.ok(Collections.singletonMap("message", "Logout successful"));
     }
 
     @PutMapping("/password/reset")
-    public ResponseEntity<Void> resetPassword(
+    public ResponseEntity<Map<String, String>> resetPassword(
             @RequestHeader("X-User-ID") String userId,
-            @RequestBody PasswordChangeRequest request) {
+            @Valid @RequestBody PasswordChangeRequest request) {
 
         authService.resetPassword(userId, request);
 
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(Collections.singletonMap("message", "Password reset successful"));
     }
 
     @GetMapping("/health")
