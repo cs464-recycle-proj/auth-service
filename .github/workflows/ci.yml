@@ -40,7 +40,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: spotbugs-report-auth
-          path: target/spotbugsXml.xml
+          path: target/spotbugs/spotbugsXml.xml
       - run: ./mvnw checkstyle:checkstyle
         continue-on-error: true
       - uses: actions/upload-artifact@v4
@@ -65,4 +65,4 @@ jobs:
         with:
           name: test-results-auth
           path: target/surefire-reports
-
+          
