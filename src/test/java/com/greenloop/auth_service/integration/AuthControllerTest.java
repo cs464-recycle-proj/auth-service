@@ -1,4 +1,4 @@
-package com.greenloop.auth_service.test.integration;
+package com.greenloop.auth_service.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.greenloop.auth_service.dto.LoginRequest;

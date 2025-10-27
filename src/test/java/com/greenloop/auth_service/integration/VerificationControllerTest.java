@@ -1,4 +1,4 @@
-package com.greenloop.auth_service.test.integration;
+package com.greenloop.auth_service.integration;
 
 import com.greenloop.auth_service.service.VerificationService;
 import org.junit.jupiter.api.Test;

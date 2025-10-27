@@ -1,4 +1,4 @@
-package com.greenloop.auth_service.test.unit;
+package com.greenloop.auth_service.unit;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
