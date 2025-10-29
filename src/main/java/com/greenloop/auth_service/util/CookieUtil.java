@@ -9,6 +9,9 @@ import org.springframework.stereotype.Component;
 import java.util.Arrays;
 import java.util.Optional;
 
+/**
+ * Utility for adding, reading, and deleting JWT cookies.
+ */
 @Component
 public class CookieUtil {
 
@@ -31,7 +34,7 @@ public class CookieUtil {
     private String path;
 
     /**
-     * Add JWT token as HTTP-only cookie to response
+     * Adds JWT token as HTTP-only cookie to the response.
      */
     public void addTokenCookie(HttpServletResponse response, String token) {
         Cookie cookie = new Cookie(cookieName, token);
@@ -55,7 +58,7 @@ public class CookieUtil {
     }
 
     /**
-     * Extract JWT token from cookies
+     * Extracts JWT token from cookies.
      */
     public Optional<String> getTokenFromCookie(HttpServletRequest request) {
         if (request.getCookies() == null) {
@@ -69,14 +72,14 @@ public class CookieUtil {
     }
 
     /**
-     * Delete token cookie (for logout)
+     * Deletes the token cookie (for logout).
      */
     public void deleteTokenCookie(HttpServletResponse response) {
         Cookie cookie = new Cookie(cookieName, "");
         cookie.setHttpOnly(true);
         cookie.setSecure(secure);
         cookie.setPath(path);
-        cookie.setMaxAge(0); 
+        cookie.setMaxAge(0);
 
         if (!domain.isEmpty()) {
             cookie.setDomain(domain);

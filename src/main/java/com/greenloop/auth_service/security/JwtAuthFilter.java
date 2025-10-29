@@ -21,6 +21,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Optional;
 
+/**
+ * Servlet filter that extracts JWT from cookie or Authorization header and
+ * populates Spring Security context if valid.
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j

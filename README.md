@@ -97,6 +97,21 @@ This service uses **GitHub Actions** for CI. The workflow includes:
   * Generates an HTML report (`target/site/checkstyle.html`) if violations exist
 * **Tests**: unit & integration tests are run in CI, and reports are archived
 
+### Coverage & Javadocs (consistent with Gateway)
+
+* **JaCoCo Coverage**: generated at `target/site/jacoco/index.html`
+
+  ```bash
+  ./mvnw clean test jacoco:report
+  ```
+
+* **Javadocs**: generated JAR is attached; browse local docs with:
+
+  ```bash
+  ./mvnw javadoc:javadoc
+  open target/site/apidocs/index.html
+  ```
+
 ### Run Static Analysis Locally
 
 #### SpotBugs

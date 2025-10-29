@@ -27,6 +27,10 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Core authentication workflows: signup, admin signup, login, logout, and
+ * password reset.
+ */
 @Service
 @RequiredArgsConstructor
 public class AuthService {

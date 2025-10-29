@@ -14,6 +14,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+/**
+ * Spring Security configuration for stateless JWT authentication.
+ */
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -23,6 +26,9 @@ public class SecurityConfiguration {
         private final AuthenticationProvider authenticationProvider;
         private final CookieUtil cookieUtil;
 
+        /**
+         * Configures HTTP security with public, admin, and authenticated routes.
+         */
         @Bean
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
                 http
