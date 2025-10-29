@@ -62,6 +62,7 @@ Create `.env` in the `auth-service` folder:
 JWT_SECRET=fake-secret-value
 JWT_EXPIRATION_TIME=86400000
 JWT_ISSUER=auth-service-issuer
+DATABASE_URL=fake-url
 DATABASE_PASSWORD=fake-password
 DATABASE_USERNAME=postgres.fakeuser
 MAIL_HOST=smtp.gmail.com
@@ -87,23 +88,6 @@ Ah, got it! You want the **Auth Service configuration section** to be concise li
 * **Database:** Supabase/PostgreSQL connection (from environment variables)
 * **Mail (OTP):** SMTP host, port, username, password
 * **Actuator:** Health and info endpoints exposed
-
-### Environment Variables
-
-Defined in `.env`:
-
-```env
-JWT_SECRET=...
-JWT_EXPIRATION_TIME=...
-JWT_ISSUER=...
-DATABASE_USERNAME=...
-DATABASE_PASSWORD=...
-MAIL_HOST=...
-MAIL_PORT=...
-MAIL_USERNAME=...
-MAIL_PASSWORD=...
-
----
 
 ## 🧪 Testing
 

@@ -134,23 +134,37 @@ jobs:
       - name: Test Docker image
         run: |
           docker run --rm -d --name auth-test \
-            -e MAIL_HOST=fake \
-            -e MAIL_PORT=587 \
-            -e MAIL_USERNAME=fake \
-            -e MAIL_PASSWORD=fake \
+            -e JWT_SECRET=dGVzdC1zZWNyZXQta2V5LWZvci10ZXN0aW5nLXB1cnBvc2VzLW9ubHktbXVzdC1iZS0yNTYtYml0cw== \
+            -e JWT_EXPIRATION_TIME=600000 \
+            -e JWT_ISSUER=auth-service-test \
+            -e DATABASE_URL=jdbc:h2:mem:testdb \
+            -e DATABASE_USERNAME=sa \
+            -e DATABASE_PASSWORD= \
+            -e MAIL_HOST=localhost \
+            -e MAIL_PORT=1025 \
+            -e MAIL_USERNAME=test \
+            -e MAIL_PASSWORD=test \
             -p 8081:8081 \
             ${{ secrets.DOCKER_USERNAME }}/greenloop-auth-service:test
 
           echo "Waiting for container to start..."
-          sleep 15
+          sleep 30
 
-          docker ps | grep auth-test
-          echo "Container is running."
+          if ! docker ps | grep auth-test; then
+            echo "Container failed to start. Logs:"
+            docker logs auth-test || true
+            exit 1
+          fi
 
-          echo "Testing health endpoint..."
-          curl -f http://localhost:8081/actuator/health || exit 1
+          echo "Container is running. Testing health endpoint..."
+          if ! curl -f http://localhost:8081/actuator/health; then
+            echo "Health check failed. Container logs:"
+            docker logs auth-test
+            docker stop auth-test || true
+            exit 1
+          fi
+          
           echo "Health check passed."
-
           docker stop auth-test
 
       - name: Push Docker image
