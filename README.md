@@ -1,74 +1,176 @@
 # 🛡️ Auth Service
 
+## 📖 API Documentation
+
+The Auth Service includes **Javadoc-generated API documentation** for all public classes and methods.
+
+* **Location:** [`docs/apidocs/index.html`](https://cs464-recycle-proj.github.io/auth-service/apidocs/index.html)
+* **Usage:** View endpoints, method signatures, and comments for developers integrating or contributing to the Auth Service.
+* **Example:** Open directly in your browser:
+
+```bash
+# From repo root
+open docs/apidocs/index.html   # Mac/Linux
+start docs\apidocs\index.html  # Windows
+```
+
+> 💡 Keep this folder updated by running: `mvn javadoc:javadoc`
+
+---
+
+## 📊 Test Coverage
+
+The project includes comprehensive unit tests with coverage reports.
+Current coverage: **84%**
+
+![Test Coverage](docs/coverage.png)
+
+---
+
 ## 📘 Description
 
-**auth-service** is a Spring Boot–based microservice that handles **user authentication and authorization**.
-It provides secure user registration, login, and **role-based access control (USER / ADMIN)** using **JWT authentication**.
+**auth-service** is a Spring Boot–based microservice responsible for **authentication and authorization**.
+It manages secure user registration, login, and **role-based access control (USER / ADMIN)** using **JWT authentication**.
 
 Key features include:
 
-* **Email verification** via One-Time Passwords (OTPs) sent through Gmail SMTP
-* **Password reset** and user verification tracking
-* **Stateless JWT integration** for secure identity management across microservices
-* **Cookie-based authentication**: JWT tokens are issued in cookies (`AUTH_TOKEN`) for session tracking and downstream gateway services
+* **Email verification** with OTPs sent via Gmail SMTP
+* **Password reset** and account verification tracking
+* **Stateless JWT tokens** for sessionless authentication
+* **Cookie-based login** with JWT stored in `AUTH_TOKEN` cookie
+* **Integration with Gateway Service**, which injects user details in headers for downstream services
 
-**Service Port:** `8081`  
+**Service Port:** `8081`
 **Database:** Supabase – Schema: `authentication`
 
 ---
 
 ## 🚀 Getting Started
 
-### Run the Service Locally
+### Prerequisites
 
-```bash
-./mvnw spring-boot:run
-````
+* Docker & Docker Compose
+* Java 21
+* Maven (wrapper included)
+* `.env` file with environment variables
 
-### Run Tests (Unit & Integration)
+### Environment Variables
 
-```bash
-./mvnw test -Dspring.profiles.active=test
+Create `.env` in the `auth-service` folder:
+
+```env
+JWT_SECRET=fake-secret-value
+JWT_EXPIRATION_TIME=86400000
+JWT_ISSUER=auth-service-issuer
+DATABASE_PASSWORD=fake-password
+DATABASE_USERNAME=postgres.fakeuser
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=fakeemail@gmail.com
+MAIL_PASSWORD=fake-app-password
 ```
-
-### Docker
-
-This service is automatically set up when running the **Gateway Docker Compose**.
-
-```bash
-cd ../gateway
-docker-compose up --build
-```
-
-This will start **both the Gateway and Auth Service** together.
 
 ---
 
-## 📡 API Endpoints
+## ⚙️ Configuration
 
-| Endpoint                   | Method   | Description                                                                                   |
-| -------------------------- | -------- | --------------------------------------------------------------------------------------------- |
-| `/api/auth/signup`         | **POST** | Register a new user and trigger an OTP email for verification                                 |
-| `/api/auth/login`          | **POST** | Login with email and password (only for verified users). Returns JWT in cookie (`AUTH_TOKEN`) |
-| `/api/auth/admin/signup`   | **POST** | Register a new admin (secured endpoint)                                                       |
-| `/api/auth/logout`         | **POST** | Logout the current user (clears JWT cookie)                                                   |
-| `/api/auth/health`         | **GET**  | Health check for the authentication service                                                   |
-| `/api/verify/send-otp`     | **POST** | Send or resend an OTP to the user’s registered email                                          |
-| `/api/verify/check-otp`    | **POST** | Verify a user’s email using the OTP code                                                      |
-| `/api/auth/password/reset` | **PUT**  | Reset a user’s password                                                                       |
+Ah, got it! You want the **Auth Service configuration section** to be concise like the Gateway README, instead of listing every `application.properties` key. Here's a tidy version for your Auth Service README:
+
+---
+
+## ⚙️ Configuration
+
+### Application Properties
+
+* **Server Port:** `server.port=8081`
+* **JWT Settings:** Secret, expiration time, and cookie name
+* **Database:** Supabase/PostgreSQL connection (from environment variables)
+* **Mail (OTP):** SMTP host, port, username, password
+* **Actuator:** Health and info endpoints exposed
+
+### Environment Variables
+
+Defined in `.env`:
+
+```env
+JWT_SECRET=...
+JWT_EXPIRATION_TIME=...
+JWT_ISSUER=...
+DATABASE_USERNAME=...
+DATABASE_PASSWORD=...
+MAIL_HOST=...
+MAIL_PORT=...
+MAIL_USERNAME=...
+MAIL_PASSWORD=...
+
+---
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+./mvnw test
+
+# Run tests + generate coverage
+./mvnw test jacoco:report
+
+# Run specific test class
+./mvnw test -Dtest=JwtUtilTest
+```
+
+### Unit Tests
+
+* `AuthServiceTest`
+* `VerificationServiceTest`
+* `CookieUtilTest`
+* `JwtAuthFilterTest`
+* `JwtServiceTest`
+
+### Integration Tests
+
+* `AuthControllerTest`
+* `VerificationControllerTest`
 
 ---
 
 ## 🧩 Integration
 
-* Issues **JWT tokens** stored in cookies (`AUTH_TOKEN`)
-* Designed to integrate seamlessly with the **Gateway Service**, which:
+This service works together with the **Gateway Service**:
 
-  * Reads the cookie
-  * Validates the JWT
-  * Adds `X-User-ID` and `X-User-Role` headers for downstream services
+* Issues JWT tokens stored in `AUTH_TOKEN` cookies
+* Gateway validates JWTs and injects:
 
-This ensures other microservices don’t need to handle authentication directly.
+  * `X-User-ID`
+  * `X-User-Role`
+* Other microservices rely on these headers without handling auth directly
+
+---
+
+## 🔄 CI/CD Workflow
+
+### Overview
+
+1. **Build and Test**
+
+   * JDK 21 setup, Maven caching
+   * Compile and run unit tests
+   * Upload test and coverage reports
+
+2. **Code Quality**
+
+   * Runs **Checkstyle** and **SpotBugs**
+   * Performs **SonarCloud** analysis on `main` branch
+
+3. **Docker Build**
+
+   * Builds Docker image `greenloop-auth-service:test`
+   * Performs health check with `curl`
+   * Pushes image on `main` branch
+
+4. **Security Scans**
+
+   * Uses **Trivy** and **OWASP Dependency Check**
+   * Uploads scan reports as artifacts
 
 ---
 
@@ -78,61 +180,74 @@ This ensures other microservices don’t need to handle authentication directly.
 * **Spring Boot 3**
 * **Spring Security + JWT**
 * **Supabase (PostgreSQL)**
-* **Docker-ready (via Gateway Docker Compose)**
+* **Docker-ready**
 * **Maven**
 
 ---
 
-## ⚙️ CI/CD & Static Analysis
+## ⚙️ Static Analysis
 
-This service uses **GitHub Actions** for CI. The workflow includes:
-
-* **SpotBugs**: analyzes potential bugs in the code.
-
-  * **Fails the build only on High-priority bugs**
-  * Generates an XML report (`target/spotbugsXml.xml`) for review
-* **Checkstyle**: enforces code style rules using the Google Java Style.
-
-  * **Does not fail the build** on violations
-  * Generates an HTML report (`target/site/checkstyle.html`) if violations exist
-* **Tests**: unit & integration tests are run in CI, and reports are archived
-
-### Coverage & Javadocs (consistent with Gateway)
-
-* **JaCoCo Coverage**: generated at `target/site/jacoco/index.html`
-
-  ```bash
-  ./mvnw clean test jacoco:report
-  ```
-
-* **Javadocs**: generated JAR is attached; browse local docs with:
-
-  ```bash
-  ./mvnw javadoc:javadoc
-  open target/site/apidocs/index.html
-  ```
-
-### Run Static Analysis Locally
-
-#### SpotBugs
+### SpotBugs
 
 ```bash
-# Open the GUI to inspect bugs interactively
 ./mvnw spotbugs:gui
-
-# Compile and check for bugs (will fail only on High-priority if configured)
 ./mvnw clean compile spotbugs:check
 ```
 
-#### Checkstyle
+### Checkstyle
 
 ```bash
-# Check code style and generate report
 ./mvnw checkstyle:check
 ```
 
-### CI Notes
+### Javadoc & Coverage
 
-* Workflow triggers on push or PR to `main` branches affecting `auth-service/**`
-* Artifacts such as SpotBugs and Checkstyle reports are uploaded for inspection even if the build does not fail
-* This ensures developers can review code quality before merging
+```bash
+./mvnw javadoc:javadoc
+open target/site/apidocs/index.html
+
+./mvnw clean test jacoco:report
+open target/site/jacoco/index.html
+```
+
+---
+
+## 📊 Monitoring
+
+**Health Checks**
+
+```bash
+curl http://localhost:8081/actuator/health
+curl http://localhost:8081/actuator/info
+```
+
+**Dockerfile Health Check**
+
+```dockerfile
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8081/actuator/health || exit 1
+```
+
+---
+
+## 🧠 Best Practices
+
+* ✅ Cookie-based JWT storage
+* ✅ Non-root Docker user
+* ✅ Javadoc for all public methods
+* ✅ Input validation & null checks
+* ✅ Security-first design
+* ✅ Code style via Checkstyle
+
+---
+
+## 👥 Contributing
+
+1. Add Javadoc for new classes/methods
+2. Write or update unit tests
+3. Update README for new features
+4. Follow the existing coding style
+
+---
+
+**GreenLoop Auth Service** | Version 1.0 | Java 21 | Spring Boot 3.2.5
