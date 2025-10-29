@@ -115,7 +115,15 @@ jobs:
 
       - name: Run container test
         run: |
-          docker run -d -p 8081:8081 --name auth-test ${{ secrets.DOCKER_USERNAME }}/greenloop-auth-service:latest
+          docker run -d -p 8081:8081 --name auth-test \
+            -e MAIL_HOST=smtp.gmail.com \
+            -e MAIL_PORT=587 \
+            -e MAIL_USERNAME=fake@example.com \
+            -e MAIL_PASSWORD=fakepassword \
+            -e JWT_SECRET=fake-secret \
+            -e JWT_ISSUER=auth-service-issuer \
+            greenloop-auth-service:latest
+
           sleep 10
           docker logs auth-test
           docker ps | grep auth-test
