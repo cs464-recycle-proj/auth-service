@@ -24,9 +24,19 @@ jobs:
 
       - name: Make Maven wrapper executable
         run: chmod +x mvnw
+      
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
 
-      - name: Build and run tests
-        run: ./mvnw clean verify -B
+      - name: Build with Maven
+        run: ./mvnw clean compile -B
+
+      - name: Run tests
+        run: ./mvnw test -B -Dspring.profiles.active=test
 
       - name: Upload test reports
         if: always()
