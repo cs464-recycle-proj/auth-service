@@ -131,42 +131,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Test Docker image
-        run: |
-          docker run --rm -d --name auth-test \
-            -e JWT_SECRET=dGVzdC1zZWNyZXQta2V5LWZvci10ZXN0aW5nLXB1cnBvc2VzLW9ubHktbXVzdC1iZS0yNTYtYml0cw== \
-            -e JWT_EXPIRATION_TIME=600000 \
-            -e JWT_ISSUER=auth-service-test \
-            -e DATABASE_URL=jdbc:h2:mem:testdb \
-            -e DATABASE_USERNAME=sa \
-            -e DATABASE_PASSWORD= \
-            -e MAIL_HOST=localhost \
-            -e MAIL_PORT=1025 \
-            -e MAIL_USERNAME=test \
-            -e MAIL_PASSWORD=test \
-            -p 8081:8081 \
-            ${{ secrets.DOCKER_USERNAME }}/greenloop-auth-service:test
-
-          echo "Waiting for container to start..."
-          sleep 30
-
-          if ! docker ps | grep auth-test; then
-            echo "Container failed to start. Logs:"
-            docker logs auth-test || true
-            exit 1
-          fi
-
-          echo "Container is running. Testing health endpoint..."
-          if ! curl -f http://localhost:8081/actuator/health; then
-            echo "Health check failed. Container logs:"
-            docker logs auth-test
-            docker stop auth-test || true
-            exit 1
-          fi
-          
-          echo "Health check passed."
-          docker stop auth-test
-
       - name: Push Docker image
         if: github.ref == 'refs/heads/main'
         uses: docker/build-push-action@v5

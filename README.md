@@ -72,13 +72,6 @@ MAIL_PASSWORD=fake-app-password
 ```
 
 ---
-
-## ⚙️ Configuration
-
-Ah, got it! You want the **Auth Service configuration section** to be concise like the Gateway README, instead of listing every `application.properties` key. Here's a tidy version for your Auth Service README:
-
----
-
 ## ⚙️ Configuration
 
 ### Application Properties
