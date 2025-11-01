@@ -1,0 +1,136 @@
+# Auth Service Configuration
+replicaCount: 2
+
+image:
+  repository: registry.digitalocean.com/cs464-project/auth-service
+  pullPolicy: Always
+  tag: "latest"
+
+imagePullSecrets:
+  - name: registry-cs464-project
+
+service:
+  type: ClusterIP
+  port: 8081
+  targetPort: 8081
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: auth.linyucong.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: auth-tls
+      hosts:
+        - auth.linyucong.com
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Environment Variables
+env:
+  SERVER_PORT: "8081"
+  
+  # Spring Boot / Java Configuration
+  SPRING_PROFILES_ACTIVE: "production"
+  JAVA_OPTS: "-Xms256m -Xmx512m"
+  
+  # JWT Configuration
+  JWT_ISSUER: "auth-service-issuer"
+  JWT_EXPIRATION_TIME: "86400000"  # 24 hours in milliseconds
+  
+  # Database configuration (Spring Boot style)
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://auth-service-postgresql:5432/auth_db"
+  SPRING_DATASOURCE_USERNAME: "auth"
+  SPRING_DATASOURCE_DRIVER_CLASS_NAME: "org.postgresql.Driver"
+  SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
+  SPRING_JPA_SHOW_SQL: "false"
+  
+  # Email/Mail Configuration
+  MAIL_HOST: "smtp.gmail.com"
+  MAIL_PORT: "587"
+  MAIL_USERNAME: "greenloop321@gmail.com"
+  
+  # Legacy/Direct PostgreSQL environment variables (if needed)
+  DB_HOST: "auth-service-postgresql"
+  DB_PORT: "5432"
+  DB_USER: "auth"
+  DB_NAME: "auth_db"
+  PGHOST: "auth-service-postgresql"
+  PGPORT: "5432"
+  PGDATABASE: "auth_db"
+  PGUSER: "auth"
+  
+  # Logging Configuration
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+  LOG_OUTPUT: "stdout"
+  
+  # API Configuration
+  API_TIMEOUT_SECONDS: "30"
+  API_MAX_REQUEST_SIZE_MB: "10"
+  
+  # Pagination Defaults
+  DEFAULT_PAGE_SIZE: "10"
+  MAX_PAGE_SIZE: "100"
+  
+  # CORS Configuration
+  CORS_ALLOWED_ORIGINS: "*"
+  CORS_ALLOWED_METHODS: "GET,POST,PUT,DELETE,OPTIONS"
+  CORS_ALLOWED_HEADERS: "Content-Type,Authorization,X-User-ID,X-User-Role"
+  
+  # Rate Limiting
+  RATE_LIMIT_ENABLED: "false"
+  RATE_LIMIT_REQUESTS_PER_MINUTE: "100"
+  
+  # Metrics
+  METRICS_ENABLED: "true"
+  METRICS_PATH: "/metrics"
+  
+  # Health Check
+  HEALTH_CHECK_PATH: "/health"
+  
+  # Admin Settings
+  ADMIN_ROLE: "admin"
+  USER_ROLE: "user"
+
+# PostgreSQL Configuration
+postgresql:
+  enabled: true
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/postgresql
+    tag: 17.2.0-debian-12-r4
+  auth:
+    username: auth
+    password: ""  # Override with secrets in deployment
+    database: auth_db
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 256Mi
