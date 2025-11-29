@@ -52,6 +52,11 @@ spec:
                 secretKeyRef:
                   name: {{ include "auth-service.fullname" . }}-db-secret
                   key: password
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "auth-service.fullname" . }}-db-secret
+                  key: password
             - name: RESEND_API_KEY
               valueFrom:
                 secretKeyRef:
