@@ -44,14 +44,12 @@ env:
   JWT_ISSUER: "auth-service-issuer"
   JWT_EXPIRATION_TIME: "86400000"  # 24 hours in milliseconds
   
+  # Resend Email API Configuration
+  RESEND_FROM_EMAIL: "noreply@greenloop.linyucong.com"
+  
   # Database configuration (Spring Boot style)
   DATABASE_URL: "jdbc:postgresql://auth-service-postgresql:5432/auth_db"
   DATABASE_USERNAME: "auth"
-  
-  # Email/Mail Configuration
-  MAIL_HOST: "smtp.gmail.com"
-  MAIL_PORT: "587"
-  MAIL_USERNAME: "greenloop321@gmail.com"
   
   # Legacy/Direct PostgreSQL environment variables (if needed)
   DB_HOST: "auth-service-postgresql"
@@ -118,3 +116,7 @@ postgresql:
       requests:
         cpu: 250m
         memory: 256Mi
+
+# Resend Email API Configuration
+resend:
+  apiKey: ""  # Set via --set or in CI/CD pipeline

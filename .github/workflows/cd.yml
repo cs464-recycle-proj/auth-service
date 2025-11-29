@@ -135,11 +135,13 @@ jobs:
             auth:
               password: "${{ secrets.POSTGRESQL_PASSWORD }}"
           
+          resend:
+            apiKey: "${{ secrets.RESEND_API_KEY }}"
+          
           env:
             DATABASE_PASSWORD: "${{ secrets.POSTGRESQL_PASSWORD }}"
             PGPASSWORD: "${{ secrets.POSTGRESQL_PASSWORD }}"
             JWT_SECRET: "${{ secrets.JWT_SECRET }}"
-            MAIL_PASSWORD: "${{ secrets.MAIL_PASSWORD }}"
           EOF
 
       - name: Build Helm dependencies
