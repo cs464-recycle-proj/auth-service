@@ -45,11 +45,8 @@ env:
   JWT_EXPIRATION_TIME: "86400000"  # 24 hours in milliseconds
   
   # Database configuration (Spring Boot style)
-  SPRING_DATASOURCE_URL: "jdbc:postgresql://auth-service-postgresql:5432/auth_db"
-  SPRING_DATASOURCE_USERNAME: "auth"
-  SPRING_DATASOURCE_DRIVER_CLASS_NAME: "org.postgresql.Driver"
-  SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
-  SPRING_JPA_SHOW_SQL: "false"
+  DATABASE_URL: "jdbc:postgresql://auth-service-postgresql:5432/auth_db"
+  DATABASE_USERNAME: "auth"
   
   # Email/Mail Configuration
   MAIL_HOST: "smtp.gmail.com"
@@ -108,7 +105,7 @@ postgresql:
     tag: 17.2.0-debian-12-r4
   auth:
     username: auth
-    password: ""  # Override with secrets in deployment
+    password: "Ilovesmu1!"
     database: auth_db
   primary:
     persistence:
