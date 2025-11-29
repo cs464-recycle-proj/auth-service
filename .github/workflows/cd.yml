@@ -12,6 +12,7 @@ on:
 permissions:
   contents: read
   actions: read
+  packages: write
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -135,9 +136,10 @@ jobs:
               password: "${{ secrets.POSTGRESQL_PASSWORD }}"
           
           env:
+            DATABASE_PASSWORD: "${{ secrets.POSTGRESQL_PASSWORD }}"
             PGPASSWORD: "${{ secrets.POSTGRESQL_PASSWORD }}"
-            RABBITMQ_USERNAME: "${{ secrets.RABBITMQ_USERNAME }}"
-            RABBITMQ_PASSWORD: "${{ secrets.RABBITMQ_PASSWORD }}"
+            JWT_SECRET: "${{ secrets.JWT_SECRET }}"
+            MAIL_PASSWORD: "${{ secrets.MAIL_PASSWORD }}"
           EOF
 
       - name: Build Helm dependencies
@@ -165,59 +167,6 @@ jobs:
           kubectl rollout status deployment/${{ env.HELM_RELEASE_NAME }} -n ${{ env.K8S_NAMESPACE }}
           kubectl get pods -n ${{ env.K8S_NAMESPACE }} -l app.kubernetes.io/name=auth-service
 
-      - name: Get LoadBalancer IP
-        id: get-ip
-        run: |
-          echo "Waiting for LoadBalancer IP..."
-          for i in {1..30}; do
-            INGRESS_IP=$(kubectl get svc -n ingress-nginx nginx-ingress-ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
-            if [ -n "$INGRESS_IP" ]; then
-              echo "LoadBalancer IP: $INGRESS_IP"
-              echo "ip=$INGRESS_IP" >> $GITHUB_OUTPUT
-              break
-            fi
-            echo "Attempt $i/30: Waiting for IP..."
-            sleep 10
-          done
-          
-          if [ -z "$INGRESS_IP" ]; then
-            echo "Warning: Could not get LoadBalancer IP"
-            echo "ip=pending" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Update Cloudflare DNS
-        if: steps.get-ip.outputs.ip != 'pending'
-        run: |
-          ZONE_ID="${{ secrets.CLOUDFLARE_ZONE_ID }}"
-          API_TOKEN="${{ secrets.CLOUDFLARE_API_TOKEN }}"
-          DOMAIN="auth.linyucong.com"
-          IP="${{ steps.get-ip.outputs.ip }}"
-          
-          echo "Updating DNS for $DOMAIN to point to $IP"
-          
-          # Get DNS record ID
-          RECORD_ID=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records?type=A&name=$DOMAIN" \
-            -H "Authorization: Bearer $API_TOKEN" \
-            -H "Content-Type: application/json" | jq -r '.result[0].id')
-          
-          if [ "$RECORD_ID" == "null" ] || [ -z "$RECORD_ID" ]; then
-            # Create new DNS record
-            echo "Creating new DNS record..."
-            curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \
-              -H "Authorization: Bearer $API_TOKEN" \
-              -H "Content-Type: application/json" \
-              --data "{\"type\":\"A\",\"name\":\"$DOMAIN\",\"content\":\"$IP\",\"ttl\":120,\"proxied\":false}"
-          else
-            # Update existing DNS record
-            echo "Updating existing DNS record (ID: $RECORD_ID)..."
-            curl -s -X PUT "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records/$RECORD_ID" \
-              -H "Authorization: Bearer $API_TOKEN" \
-              -H "Content-Type: application/json" \
-              --data "{\"type\":\"A\",\"name\":\"$DOMAIN\",\"content\":\"$IP\",\"ttl\":120,\"proxied\":false}"
-          fi
-          
-          echo "DNS update completed for $DOMAIN → $IP"
-
       - name: Display deployment summary
         run: |
           echo "### 🚀 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
@@ -231,12 +180,7 @@ jobs:
           echo "- Cluster: \`${{ secrets.K8S_CLUSTER_NAME }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- Namespace: \`${{ env.K8S_NAMESPACE }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- Release: \`${{ env.HELM_RELEASE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- LoadBalancer IP: \`${{ steps.get-ip.outputs.ip }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**DNS:**" >> $GITHUB_STEP_SUMMARY
-          echo "- Domain: \`auth.linyucong.com\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Points to: \`${{ steps.get-ip.outputs.ip }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Status: DNS automatically updated ✅" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:**" >> $GITHUB_STEP_SUMMARY
           echo "- SHA: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
@@ -248,4 +192,4 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**🌐 Service URL:**" >> $GITHUB_STEP_SUMMARY
-          echo "https://auth.linyucong.com" >> $GITHUB_STEP_SUMMARY
+          echo "Internal only: auth-service.auth.svc.cluster.local:8081" >> $GITHUB_STEP_SUMMARY

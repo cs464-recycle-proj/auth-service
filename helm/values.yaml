@@ -15,20 +15,7 @@ service:
   targetPort: 8081
 
 ingress:
-  enabled: true
-  className: nginx
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-  hosts:
-    - host: auth.linyucong.com
-      paths:
-        - path: /
-          pathType: Prefix
-  tls:
-    - secretName: auth-tls
-      hosts:
-        - auth.linyucong.com
+  enabled: false  # Only internal access via Kubernetes DNS
 
 resources:
   limits:
